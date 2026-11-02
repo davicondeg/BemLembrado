@@ -3,6 +3,33 @@ import { parseReminderCommand } from "./parser";
 import { enqueueText } from "@/lib/outbox/service";
 
 export async function handleUserMessage(db: SupabaseClient, userId: string, sender: string, text: string) {
+  const normalized = text.trim().toLocaleLowerCase("pt-BR");
+  if (/^(sim|feito|fiz|ok|confirmo|conclu[ií]do)$/.test(normalized)) {
+    const now = new Date().toISOString();
+    const { data: reminder, error: reminderError } = await db.from("reminders")
+      .select("id,title")
+      .eq("user_id", userId)
+      .eq("recipient", sender)
+      .eq("status", "sent")
+      .eq("confirmation_required", true)
+      .gt("confirmation_deadline", now)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (reminderError) throw reminderError;
+    if (!reminder) return enqueueText(db, sender, "Não encontrei um lembrete aguardando confirmação.");
+
+    const { error: updateError } = await db.from("reminders").update({
+      status: "confirmed", confirmed_at: now, confirmation_deadline: null, updated_at: now,
+    }).eq("id", reminder.id).eq("status", "sent");
+    if (updateError) throw updateError;
+    const { error: eventError } = await db.from("reminder_events").insert({
+      reminder_id: reminder.id, event_type: "confirmed_by_whatsapp", payload: { answer: text.trim() },
+    });
+    if (eventError) throw eventError;
+    return enqueueText(db, sender, `Confirmação registrada para “${reminder.title}”. Obrigado!`);
+  }
+
   const command = parseReminderCommand(text);
 
   if (command.kind === "ambiguous") return enqueueText(db, sender, command.reason);

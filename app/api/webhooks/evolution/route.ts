@@ -38,10 +38,17 @@ export async function POST(request: Request) {
     }
     const { data: link, error } = await db.from("whatsapp_links").select("user_id").eq("phone", incoming.sender).not("linked_at", "is", null).maybeSingle();
     if (error) throw error;
-    if (!link) {
+    let userId = link?.user_id;
+    if (!userId) {
+      const { data: assisted, error: assistedError } = await db.from("assisted_people").select("owner_id")
+        .eq("whatsapp_e164", incoming.sender).eq("active", true).is("archived_at", null).limit(1).maybeSingle();
+      if (assistedError) throw assistedError;
+      userId = assisted?.owner_id;
+    }
+    if (!userId) {
       await db.from("bot_outbox").insert({ instance_name: incoming.instanceName, recipient: incoming.sender, message_text: "Este número ainda não está vinculado a uma conta do Bem Lembrado." });
     } else {
-      await handleUserMessage(db, link.user_id, incoming.sender, incoming.text);
+      await handleUserMessage(db, userId, incoming.sender, incoming.text);
     }
     await db.from("inbound_messages").update({ processed_at: new Date().toISOString() }).eq("id", inserted.id);
     return NextResponse.json({ accepted: true });
