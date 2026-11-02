@@ -21,7 +21,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <button className="primary wide" formAction={signIn}>Entrar</button>
         <details><summary>Criar minha conta</summary><label>Nome completo<input name="fullName" autoComplete="name" /></label><button className="secondary" formAction={signUp}>Cadastrar</button></details>
       </form>
-      <small>Este MVP não substitui atendimento médico ou serviço de emergência.</small>
+      <small>O Bem Lembrado não substitui atendimento médico ou serviço de emergência.</small>
     </section>
   </main>;
 }
