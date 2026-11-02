@@ -5,6 +5,7 @@ node_modules/
 *.log
 .vercel/
 .codex_tmp/
+.temp/
 infra/evolution/.env
 supabase/.temp/
 qr-temporario.png
