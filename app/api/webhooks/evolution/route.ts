@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { extractIncomingMessage } from "@/lib/whatsapp/evolution";
-import { handleUserMessage } from "@/lib/reminders/service";
+import { handleAuthorizedContactMessage, handleUserMessage } from "@/lib/reminders/service";
 import { serverEnv } from "@/lib/env/server";
 import { secretMatches } from "@/lib/security/secrets";
 import { hashLinkCode } from "@/lib/whatsapp/link-code";
@@ -45,10 +45,22 @@ export async function POST(request: Request) {
       if (assistedError) throw assistedError;
       userId = assisted?.owner_id;
     }
-    if (!userId) {
-      await db.from("bot_outbox").insert({ instance_name: incoming.instanceName, recipient: incoming.sender, message_text: "Este número ainda não está vinculado a uma conta do Bem Lembrado." });
-    } else {
+    if (userId) {
       await handleUserMessage(db, userId, incoming.sender, incoming.text);
+    } else {
+      const { data: contact, error: contactError } = await db.from("authorized_contacts")
+        .select("id,full_name,assisted_person_id").eq("whatsapp_e164", incoming.sender).limit(1).maybeSingle();
+      if (contactError) throw contactError;
+      if (contact) {
+        const { data: person, error: personError } = await db.from("assisted_people")
+          .select("full_name").eq("id", contact.assisted_person_id).single();
+        if (personError) throw personError;
+        await handleAuthorizedContactMessage(db, {
+          id: contact.id, fullName: contact.full_name, assistedName: person.full_name,
+        }, incoming.sender, incoming.text);
+      } else {
+        await db.from("bot_outbox").insert({ instance_name: incoming.instanceName, recipient: incoming.sender, message_text: "Este número ainda não está vinculado a uma conta do Bem Lembrado." });
+      }
     }
     await db.from("inbound_messages").update({ processed_at: new Date().toISOString() }).eq("id", inserted.id);
     return NextResponse.json({ accepted: true });

@@ -64,3 +64,45 @@ export async function handleUserMessage(db: SupabaseClient, userId: string, send
   if (updateError) throw updateError;
   return enqueueText(db, sender, `Lembrete “${data[0].message}” cancelado.`);
 }
+
+export async function handleAuthorizedContactMessage(
+  db: SupabaseClient,
+  contact: { id: string; fullName: string; assistedName: string },
+  sender: string,
+  text: string,
+) {
+  const normalized = text.trim().toLocaleLowerCase("pt-BR");
+  const isConfirmation = /^(confirmado|confirmo)$/.test(normalized);
+  if (!isConfirmation) {
+    return enqueueText(
+      db,
+      sender,
+      `Olá, ${contact.fullName}. Você está cadastrado como contato autorizado de ${contact.assistedName}. Para confirmar manualmente o último alerta, responda CONFIRMADO.`,
+    );
+  }
+
+  const since = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+  const { data: reminder, error: reminderError } = await db.from("reminders")
+    .select("id,title")
+    .eq("alert_contact_id", contact.id)
+    .eq("status", "not_done")
+    .gt("alerted_at", since)
+    .order("alerted_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (reminderError) throw reminderError;
+  if (!reminder) return enqueueText(db, sender, "Não encontrei um alerta recente aguardando confirmação manual.");
+
+  const now = new Date().toISOString();
+  const { error: updateError } = await db.from("reminders").update({
+    status: "confirmed", confirmed_at: now, updated_at: now,
+  }).eq("id", reminder.id).eq("status", "not_done");
+  if (updateError) throw updateError;
+  const { error: eventError } = await db.from("reminder_events").insert({
+    reminder_id: reminder.id,
+    event_type: "confirmed_by_authorized_contact",
+    payload: { contact_id: contact.id, answer: text.trim() },
+  });
+  if (eventError) throw eventError;
+  return enqueueText(db, sender, `Confirmação manual registrada para “${reminder.title}”. Obrigado!`);
+}
