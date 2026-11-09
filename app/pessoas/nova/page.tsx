@@ -18,38 +18,38 @@ export default async function NewPerson({ searchParams }: { searchParams: Promis
       </header>
 
       <div className="assistedSignupLayout">
-        <section className="card assistedFormCard">
+        <section className="card formCard assistedFormCard">
           {params.erro && <p className="formMessage error">{params.erro}</p>}
           <form action={createAssistedPerson}>
-            <fieldset className="assistedFormSection">
-              <legend>
+            <section className="assistedFormSection">
+              <div className="assistedSectionHeading">
                 <span>1</span>
                 <span><strong>Pessoa assistida</strong><small>Quem receberá os lembretes no WhatsApp.</small></span>
-              </legend>
+              </div>
               <div className="formGrid">
                 <label>Nome completo<input name="fullName" autoComplete="name" placeholder="Ex.: Maria de Souza" required /></label>
                 <label>WhatsApp da pessoa<input name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="(27) 99999-9999" aria-describedby="assisted-phone-help" required /><small id="assisted-phone-help">Informe o DDD; o código 55 será adicionado automaticamente.</small></label>
               </div>
-            </fieldset>
+            </section>
 
-            <fieldset className="assistedFormSection">
-              <legend>
+            <section className="assistedFormSection">
+              <div className="assistedSectionHeading">
                 <span>2</span>
                 <span><strong>Contato responsável</strong><small>Quem receberá os alertas de acompanhamento.</small></span>
-              </legend>
+              </div>
               <div className="formGrid">
                 <label>Nome completo<input name="contactName" autoComplete="name" placeholder="Ex.: João de Souza" required /></label>
                 <label>WhatsApp do responsável<input name="contactPhone" type="tel" inputMode="tel" autoComplete="tel" placeholder="(27) 99999-9999" aria-describedby="contact-phone-help" required /><small id="contact-phone-help">Informe o DDD; o código 55 será adicionado automaticamente.</small></label>
               </div>
-            </fieldset>
+            </section>
 
-            <fieldset className="assistedConsent">
-              <legend><span>3</span><strong>Autorização</strong></legend>
+            <section className="assistedConsent">
+              <div className="assistedSectionHeading"><span>3</span><strong>Autorização</strong></div>
               <label className="checkLabel">
                 <input name="consent" type="checkbox" required />
                 <span><strong>Confirmo que os participantes autorizaram este cadastro.</strong><small>A autorização inclui o uso dos dados informados e o recebimento de lembretes e alertas pelo WhatsApp.</small></span>
               </label>
-            </fieldset>
+            </section>
 
             <div className="assistedFormActions">
               <a className="secondary buttonLink" href="/pessoas">Cancelar</a>
