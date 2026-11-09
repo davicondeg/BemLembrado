@@ -1,8 +1,9 @@
 import { AppShell } from "@/components/app-shell";
 import { requireUser } from "@/lib/auth/require-user";
 import { createAssistedPerson } from "../actions";
+import { PersonAssistant } from "./person-assistant";
 
-export default async function NewPerson({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
+export default async function NewPerson({ searchParams }: { searchParams: Promise<{ erro?: string; modo?: string }> }) {
   const { user } = await requireUser();
   const params = await searchParams;
 
@@ -17,7 +18,12 @@ export default async function NewPerson({ searchParams }: { searchParams: Promis
         </div>
       </header>
 
-      <div className="assistedSignupLayout">
+      <nav className="reminderModeTabs" aria-label="Forma de cadastrar a pessoa">
+        <a className={params.modo === "assistente" ? "active" : ""} href="/pessoas/nova?modo=assistente">✦ Conversar com o assistente</a>
+        <a className={params.modo !== "assistente" ? "active" : ""} href="/pessoas/nova">Preencher formulário</a>
+      </nav>
+
+      {params.modo === "assistente" ? <PersonAssistant /> : <div className="assistedSignupLayout">
         <section className="card formCard assistedFormCard">
           {params.erro && <p className="formMessage error">{params.erro}</p>}
           <form action={createAssistedPerson}>
@@ -68,7 +74,7 @@ export default async function NewPerson({ searchParams }: { searchParams: Promis
           </ol>
           <p className="assistedPrivacy">Os números não ficam expostos nas telas de consulta do sistema.</p>
         </aside>
-      </div>
+      </div>}
     </AppShell>
   );
 }

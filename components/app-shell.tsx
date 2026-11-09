@@ -26,15 +26,15 @@ export async function AppShell({ email, active, children }: { email: string; act
   ];
   const initials = email.slice(0, 2).toUpperCase();
 
-  return <main className="shell">
+  return <main className="shell remindersShell appShellV2">
     <aside className="sidebar">
-      <div className="brand"><span className="brandMark" aria-hidden="true"><span>✓</span></span><span className="brandText"><strong>Bem Lembrado</strong><small>Cuidado em cada momento</small></span></div>
+      <div className="brand"><span className="brandMark" aria-hidden="true"><span>✓</span></span><span className="brandText"><strong>Bem Lembrado</strong><small>Rotina de cuidado</small></span></div>
       <div className="navLabel">MENU PRINCIPAL</div>
       <nav aria-label="Navegação principal">{links.map(([href, label, icon]) => <a key={href} className={`navItem ${active === href ? "active" : ""}`} href={href}><Icon name={icon}/><span>{label}</span>{active === href && <i aria-hidden="true"/>}</a>)}</nav>
       <div className="sidebarTools"><p>AMBIENTE</p><form action={toggleMockMode}><input type="hidden" name="returnTo" value={active}/><button type="submit" className={`mockToggle ${mock ? "on" : ""}`} aria-pressed={mock}><span className="mockSwitch"/><span><strong>Dados de exemplo</strong><small>{mock ? "Demonstração ativa" : "Visualizar cenário pronto"}</small></span></button></form></div>
       <div className="sidebarAccount"><span className="accountAvatar">{initials}</span><span className="accountInfo"><strong>Responsável</strong><small>{email}</small></span><form action={signOut}><button aria-label="Sair da conta" title="Sair"><Icon name="logout"/></button></form></div>
     </aside>
-    <section className={`content ${mock ? "mockMode" : ""}`}>
+    <section className={`content remindersContent appContentV2 ${mock ? "mockMode" : ""}`}>
       <div className="mobileBrand"><span className="brandMark"><span>✓</span></span><strong>Bem Lembrado</strong></div>
       {mock && <div className="mockNotice"><span className="mockNoticeIcon">✦</span><div><strong>Modo demonstração ativo</strong><span>Você está vendo dados de exemplo. Nada será salvo ou enviado.</span></div></div>}
       <div className="pageCanvas">{children}</div>
