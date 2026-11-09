@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env/server";
 import { bearerToken, secretMatches } from "@/lib/security/secrets";
 import { afterSuccessfulSend } from "@/lib/reminders/engine";
+import { nextOccurrence } from "@/lib/reminders/recurrence";
 
 export async function POST(request: Request) {
   if (!secretMatches(bearerToken(request), serverEnv().relaySecret)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -31,8 +32,8 @@ export async function POST(request: Request) {
     if (body.success && reminder) {
       const decision = afterSuccessfulSend({ confirmationRequired: reminder.confirmation_required, currentAttempt: reminder.current_attempt, maxAttempts: reminder.max_reminder_attempts, recurring: Boolean(reminder.recurrence_rule) });
       if (decision.action === "reschedule") {
-        const nextOccurrence = new Date(new Date(reminder.scheduled_for).getTime() + 86_400_000).toISOString();
-        await db.from("reminders").update({ status: "scheduled", scheduled_for: nextOccurrence, current_attempt: 0, sent_at: now.toISOString(), last_error: null, updated_at: now.toISOString() }).eq("id", item.reminder_id);
+        const nextScheduledFor = nextOccurrence(reminder.scheduled_for, reminder.recurrence_rule);
+        if (nextScheduledFor) await db.from("reminders").update({ status: "scheduled", scheduled_for: nextScheduledFor, current_attempt: 0, sent_at: now.toISOString(), last_error: null, updated_at: now.toISOString() }).eq("id", item.reminder_id);
       } else {
         const deadline = decision.action === "wait_confirmation" ? new Date(now.getTime() + reminder.confirmation_timeout_minutes * 60_000).toISOString() : null;
         await db.from("reminders").update({ status: "sent", sent_at: now.toISOString(), confirmation_deadline: deadline, last_error: null, updated_at: now.toISOString() }).eq("id", item.reminder_id);

@@ -3,6 +3,72 @@ import { requireUser } from "@/lib/auth/require-user";
 import { createAssistedPerson } from "../actions";
 
 export default async function NewPerson({ searchParams }: { searchParams: Promise<{ erro?: string }> }) {
-  const { user } = await requireUser(); const params = await searchParams;
-  return <AppShell email={user.email || "Responsável"} active="/pessoas"><a className="backLink" href="/pessoas">← Voltar</a><header className="sectionHeader"><div><p className="eyebrow">NOVO CADASTRO</p><h1>Pessoa assistida</h1><p>Use números com DDI e DDD, por exemplo: 5527999999999.</p></div></header><section className="card formCard">{params.erro && <p className="formMessage error">{params.erro}</p>}<form action={createAssistedPerson}><fieldset><legend>Dados da pessoa</legend><label>Nome completo<input name="fullName" required /></label><label>WhatsApp<input name="phone" inputMode="tel" placeholder="5527999999999" required /></label></fieldset><fieldset><legend>Contato autorizado principal</legend><label>Nome completo<input name="contactName" required /></label><label>WhatsApp<input name="contactPhone" inputMode="tel" placeholder="5527999999999" required /></label></fieldset><label className="checkLabel"><input name="consent" type="checkbox" required/><span>Confirmo que os participantes autorizaram o uso dos dados e o recebimento de lembretes.</span></label><button className="primary">Salvar cadastro</button></form></section></AppShell>;
+  const { user } = await requireUser();
+  const params = await searchParams;
+
+  return (
+    <AppShell email={user.email || "Responsável"} active="/pessoas">
+      <a className="backLink" href="/pessoas">← Voltar para pessoas</a>
+      <header className="sectionHeader assistedHeader">
+        <div>
+          <p className="eyebrow">NOVO CADASTRO</p>
+          <h1>Quem será acompanhado?</h1>
+          <p>Cadastre a pessoa que receberá os lembretes e quem deverá ser avisado quando ela precisar de ajuda.</p>
+        </div>
+      </header>
+
+      <div className="assistedSignupLayout">
+        <section className="card assistedFormCard">
+          {params.erro && <p className="formMessage error">{params.erro}</p>}
+          <form action={createAssistedPerson}>
+            <fieldset className="assistedFormSection">
+              <legend>
+                <span>1</span>
+                <span><strong>Pessoa assistida</strong><small>Quem receberá os lembretes no WhatsApp.</small></span>
+              </legend>
+              <div className="formGrid">
+                <label>Nome completo<input name="fullName" autoComplete="name" placeholder="Ex.: Maria de Souza" required /></label>
+                <label>WhatsApp da pessoa<input name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="(27) 99999-9999" aria-describedby="assisted-phone-help" required /><small id="assisted-phone-help">Informe o DDD; o código 55 será adicionado automaticamente.</small></label>
+              </div>
+            </fieldset>
+
+            <fieldset className="assistedFormSection">
+              <legend>
+                <span>2</span>
+                <span><strong>Contato responsável</strong><small>Quem receberá os alertas de acompanhamento.</small></span>
+              </legend>
+              <div className="formGrid">
+                <label>Nome completo<input name="contactName" autoComplete="name" placeholder="Ex.: João de Souza" required /></label>
+                <label>WhatsApp do responsável<input name="contactPhone" type="tel" inputMode="tel" autoComplete="tel" placeholder="(27) 99999-9999" aria-describedby="contact-phone-help" required /><small id="contact-phone-help">Informe o DDD; o código 55 será adicionado automaticamente.</small></label>
+              </div>
+            </fieldset>
+
+            <fieldset className="assistedConsent">
+              <legend><span>3</span><strong>Autorização</strong></legend>
+              <label className="checkLabel">
+                <input name="consent" type="checkbox" required />
+                <span><strong>Confirmo que os participantes autorizaram este cadastro.</strong><small>A autorização inclui o uso dos dados informados e o recebimento de lembretes e alertas pelo WhatsApp.</small></span>
+              </label>
+            </fieldset>
+
+            <div className="assistedFormActions">
+              <a className="secondary buttonLink" href="/pessoas">Cancelar</a>
+              <button className="primary">Salvar pessoa assistida</button>
+            </div>
+          </form>
+        </section>
+
+        <aside className="assistedGuide" aria-label="Como funciona o acompanhamento">
+          <p className="eyebrow">COMO FUNCIONA</p>
+          <h2>Um cuidado simples e conectado</h2>
+          <ol>
+            <li><span>✓</span><div><strong>Lembretes no WhatsApp</strong><p>A pessoa recebe mensagens nos horários cadastrados.</p></div></li>
+            <li><span>✓</span><div><strong>Confirmação da rotina</strong><p>Ela pode responder para confirmar que realizou a atividade.</p></div></li>
+            <li><span>✓</span><div><strong>Alerta ao responsável</strong><p>Se não houver confirmação, o contato indicado pode ser avisado.</p></div></li>
+          </ol>
+          <p className="assistedPrivacy">Os números não ficam expostos nas telas de consulta do sistema.</p>
+        </aside>
+      </div>
+    </AppShell>
+  );
 }

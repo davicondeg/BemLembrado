@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
 import { afterConfirmation, afterConfirmationTimeout, afterSuccessfulSend } from "@/lib/reminders/engine";
+import { nextOccurrence } from "@/lib/reminders/recurrence";
 
 async function loadReminder(id: string) {
   const { supabase } = await requireUser();
@@ -25,7 +26,8 @@ export async function simulateSend(formData: FormData) {
   const attempt = Math.max(1, reminder.current_attempt || 0);
   const decision = afterSuccessfulSend({ confirmationRequired: reminder.confirmation_required, currentAttempt: attempt, maxAttempts: reminder.max_reminder_attempts, recurring: Boolean(reminder.recurrence_rule) });
   const deadline = decision.action === "wait_confirmation" ? new Date(Date.now() + reminder.confirmation_timeout_minutes * 60_000).toISOString() : null;
-  const update = decision.action === "reschedule" ? { status: "scheduled", scheduled_for: new Date(new Date(reminder.scheduled_for).getTime() + 86_400_000).toISOString(), current_attempt: 0, confirmation_deadline: null } : { status: "sent", sent_at: new Date().toISOString(), current_attempt: attempt, confirmation_deadline: deadline };
+  const nextScheduledFor = reminder.recurrence_rule ? nextOccurrence(reminder.scheduled_for, reminder.recurrence_rule) : null;
+  const update = decision.action === "reschedule" && nextScheduledFor ? { status: "scheduled", scheduled_for: nextScheduledFor, current_attempt: 0, confirmation_deadline: null } : { status: "sent", sent_at: new Date().toISOString(), current_attempt: attempt, confirmation_deadline: deadline };
   await supabase.from("reminders").update({ ...update, updated_at: new Date().toISOString() }).eq("id", id);
   await event(supabase, id, "simulated_send", { decision: decision.action, attempt }); refresh();
 }
@@ -34,7 +36,7 @@ export async function simulateTimeout(formData: FormData) {
   const id = String(formData.get("id") || ""); const { supabase, reminder } = await loadReminder(id);
   const decision = afterConfirmationTimeout({ confirmationRequired: reminder.confirmation_required, currentAttempt: reminder.current_attempt, maxAttempts: reminder.max_reminder_attempts, recurring: Boolean(reminder.recurrence_rule) });
   if (decision.action === "retry") await supabase.from("reminders").update({ status: "sent", current_attempt: decision.nextAttempt, confirmation_deadline: new Date(Date.now() + reminder.repeat_interval_minutes * 60_000).toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
-  else if (decision.action === "reschedule") await supabase.from("reminders").update({ status: "scheduled", scheduled_for: new Date(new Date(reminder.scheduled_for).getTime() + 86_400_000).toISOString(), current_attempt: 0, confirmation_deadline: null, alerted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
+  else if (decision.action === "reschedule" && reminder.recurrence_rule) await supabase.from("reminders").update({ status: "scheduled", scheduled_for: nextOccurrence(reminder.scheduled_for, reminder.recurrence_rule), current_attempt: 0, confirmation_deadline: null, alerted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
   else if (decision.action === "alert") await supabase.from("reminders").update({ status: "not_done", confirmation_deadline: null, alerted_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
   else await supabase.from("reminders").update({ status: "sent", confirmation_deadline: null, updated_at: new Date().toISOString() }).eq("id", id);
   await event(supabase, id, "simulated_timeout", { decision: decision.action, attempt: reminder.current_attempt }); refresh();
@@ -43,7 +45,7 @@ export async function simulateTimeout(formData: FormData) {
 export async function simulateConfirmation(formData: FormData) {
   const id = String(formData.get("id") || ""); const { supabase, reminder } = await loadReminder(id);
   const decision = afterConfirmation({ confirmationRequired: reminder.confirmation_required, currentAttempt: reminder.current_attempt, maxAttempts: reminder.max_reminder_attempts, recurring: Boolean(reminder.recurrence_rule) });
-  if (decision.action === "reschedule") await supabase.from("reminders").update({ status: "scheduled", scheduled_for: new Date(new Date(reminder.scheduled_for).getTime() + 86_400_000).toISOString(), current_attempt: 0, confirmation_deadline: null, confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
+  if (decision.action === "reschedule" && reminder.recurrence_rule) await supabase.from("reminders").update({ status: "scheduled", scheduled_for: nextOccurrence(reminder.scheduled_for, reminder.recurrence_rule), current_attempt: 0, confirmation_deadline: null, confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
   else await supabase.from("reminders").update({ status: "confirmed", confirmation_deadline: null, confirmed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", id);
   await event(supabase, id, "simulated_confirmation", { decision: decision.action }); refresh();
 }

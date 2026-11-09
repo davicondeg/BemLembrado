@@ -3,14 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
-import { normalizePhone } from "@/lib/whatsapp/phone";
+import { normalizeBrazilianPhone } from "@/lib/whatsapp/phone";
 
 export async function createAssistedPerson(formData: FormData) {
   const { user, supabase } = await requireUser();
   const fullName = String(formData.get("fullName") || "").trim();
-  const phone = normalizePhone(String(formData.get("phone") || ""));
+  const phone = normalizeBrazilianPhone(String(formData.get("phone") || ""));
   const contactName = String(formData.get("contactName") || "").trim();
-  const contactPhone = normalizePhone(String(formData.get("contactPhone") || ""));
+  const contactPhone = normalizeBrazilianPhone(String(formData.get("contactPhone") || ""));
   const consent = formData.get("consent") === "on";
   if (fullName.length < 2 || !phone || contactName.length < 2 || !contactPhone || !consent) redirect("/pessoas/nova?erro=Revise os campos e confirme o consentimento.");
 
@@ -38,10 +38,10 @@ export async function updateAssistedPerson(formData: FormData) {
   const { supabase } = await requireUser();
   const id = String(formData.get("id") || "");
   const fullName = String(formData.get("fullName") || "").trim();
-  const phone = normalizePhone(String(formData.get("phone") || ""));
+  const phone = normalizeBrazilianPhone(String(formData.get("phone") || ""));
   const contactId = String(formData.get("contactId") || "");
   const contactName = String(formData.get("contactName") || "").trim();
-  const contactPhone = normalizePhone(String(formData.get("contactPhone") || ""));
+  const contactPhone = normalizeBrazilianPhone(String(formData.get("contactPhone") || ""));
   if (!id || fullName.length < 2 || !phone || !contactId || contactName.length < 2 || !contactPhone) redirect(`/pessoas/${id}/editar?erro=Revise os campos informados.`);
   const { error } = await supabase.from("assisted_people").update({ full_name: fullName, whatsapp_e164: phone }).eq("id", id);
   const { error: contactError } = await supabase.from("authorized_contacts").update({ full_name: contactName, whatsapp_e164: contactPhone }).eq("id", contactId).eq("assisted_person_id", id);

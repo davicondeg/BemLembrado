@@ -1,7 +1,12 @@
 import { cookies } from "next/headers";
+import { DEMO_SESSION_COOKIE } from "@/lib/auth/demo-session";
 
 export async function isMockMode() {
-  return (await cookies()).get("bem_lembrado_mock")?.value === "1";
+  const cookieStore = await cookies();
+  const preference = cookieStore.get("bem_lembrado_mock")?.value;
+  if (preference === "0") return false;
+  if (preference === "1") return true;
+  return cookieStore.get(DEMO_SESSION_COOKIE)?.value === "active";
 }
 
 const today = new Date();

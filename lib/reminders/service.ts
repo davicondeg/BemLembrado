@@ -1,13 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseReminderCommand } from "./parser";
 import { enqueueText } from "@/lib/outbox/service";
+import { nextOccurrence } from "./recurrence";
 
 export async function handleUserMessage(db: SupabaseClient, userId: string, sender: string, text: string) {
   const normalized = text.trim().toLocaleLowerCase("pt-BR");
   if (/^(sim|feito|fiz|ok|confirmo|conclu[ií]do)$/.test(normalized)) {
     const now = new Date().toISOString();
     const { data: reminder, error: reminderError } = await db.from("reminders")
-      .select("id,title")
+      .select("id,title,scheduled_for,recurrence_rule")
       .eq("user_id", userId)
       .eq("recipient", sender)
       .eq("status", "sent")
@@ -19,7 +20,10 @@ export async function handleUserMessage(db: SupabaseClient, userId: string, send
     if (reminderError) throw reminderError;
     if (!reminder) return enqueueText(db, sender, "Não encontrei um lembrete aguardando confirmação.");
 
-    const { error: updateError } = await db.from("reminders").update({
+    const nextScheduledFor = reminder.recurrence_rule ? nextOccurrence(reminder.scheduled_for, reminder.recurrence_rule) : null;
+    const { error: updateError } = await db.from("reminders").update(nextScheduledFor ? {
+      status: "scheduled", scheduled_for: nextScheduledFor, current_attempt: 0, confirmed_at: now, confirmation_deadline: null, updated_at: now,
+    } : {
       status: "confirmed", confirmed_at: now, confirmation_deadline: null, updated_at: now,
     }).eq("id", reminder.id).eq("status", "sent");
     if (updateError) throw updateError;
